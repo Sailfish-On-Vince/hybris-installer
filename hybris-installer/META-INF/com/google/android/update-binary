@@ -41,7 +41,7 @@ ROOT="/data/.stowaways/sailfishos"
 FORCE_REINSTALL=0
 PARTITION_PREFIX="/dev/block/bootdevice/by-name"
 PARTITION_BOOT="$PARTITION_PREFIX/boot"
-PARTITION_VENDOR="$PARTITION_PREFIX/vendor"
+PARTITION_VENDOR="$PARTITION_PREFIX/cust"
 PARTITION_PERSIST="$PARTITION_PREFIX/persist"
 
 # >>> Sanity checks >>>
@@ -60,7 +60,7 @@ mount | grep -q "/data.*ext4" || abort 3 "Data is NOT formatted as ext4; check o
 [ -r $PARTITION_VENDOR ] || abort 4 "A vendor partition doesn't exist; you need to do an OTA from OxygenOS 5.1.5 to 5.1.6!"
 
 # Android
-(mount | grep -q /system_root || mount /system_root) || abort 5 "Couldn't mount /system!"
+(mount | grep -q /system || mount /system) || abort 5 "Couldn't mount /system!"
 if [ `cat /system/build.prop | grep lineage.build.version= | cut -d'=' -f2` != "$TARGET_LOS_VER" ]; then
 	if [ ! -f /tmp/sfos_flash_confirm ]; then
 		touch /tmp/sfos_flash_confirm
@@ -141,17 +141,6 @@ log "Disabling forced encryption in vendor fstab..."
 (umount /vendor &> /dev/null; mount -o rw /vendor && sed "s/fileencryption/encryptable/" -i /vendor/etc/fstab.qcom) || log "Couldn't disable forced encryption!"
 umount /vendor &
 
-if [[ "$TARGET_LOS_VER" = "16.0" && ! -f $ROOT/lib/systemd/system/mnt-vendor-persist.mount ]]; then
-	log "Mount unit for persist not found; copying current /persist to rootfs..."
-	mkdir -p $ROOT/mnt/vendor/persist /persist
-	if mount $PARTITION_PERSIST /persist; then
-		cp -a /persist/ $ROOT/mnt/vendor/
-		umount /persist
-	else
-		log "Couldn't mount $PARTITION_PERSIST! Skipping copying..."
-	fi
-fi
-
 if [ "$FORCE_REINSTALL" = "0" ]; then
 	log "Backing up droid-boot image..."
 	dd if=$PARTITION_BOOT of=$ROOT/boot/droid-boot.img bs=4m
@@ -195,7 +184,7 @@ offset=`expr $offset / 2`
 indent=""
 for i in `seq 1 $offset`; do indent="${indent} "; done
 
-ui_print "${indent}All done in ~${time_string}, enjoy your new OS!"
+ui_print "${indent}All done in ${time_string}, enjoy your new OS!"
 ui_print
 cleanup
 exit 0
